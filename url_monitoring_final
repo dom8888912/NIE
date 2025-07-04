@@ -1,0 +1,199 @@
+import time
+import logging
+import yaml
+import os
+import json
+import random
+from pathlib import Path
+from playwright.sync_api import sync_playwright, TimeoutError
+
+# === Konfigurierbarer Realismus-Faktor ===
+REALISMUS_FAKTOR = 3
+
+# Selektoren
+SELECTOR_PROVINZ = "select#form"
+SELECTOR_PROVINZ_BUTTON = "input#btnAceptar"
+SELECTOR_SOLICITUD_LINK = "text=SOLICITUD DE CITA PREVIA"
+SELECTOR_TRAMITE = "select#tramiteGrupo\\[1\\]"
+SELECTOR_ENTRAR = "input#btnEntrar"
+SELECTOR_NAME = "input#txtDesCitado"
+SELECTOR_ID = "input#txtIdCitado"
+SELECTOR_PASSPORT_RADIO = "input#rdbTipoDocPas"
+SELECTOR_PAIS = "select#txtPaisNac"
+SELECTOR_GEBURTSJAHR = "input#txtAnnoCitado"
+SELECTOR_SEND = "input#btnEnviar"
+
+# Konfiguration laden
+def lade_konfiguration(pfad="config.yaml"):
+    with open(pfad, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+config = lade_konfiguration()
+
+# Logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("log.txt", mode="w", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+
+def realistisch_tipen(page, selector, text):
+    try:
+        page.wait_for_selector(selector, timeout=7000)
+        page.hover(selector)
+        page.click(selector)
+        page.fill(selector, "")
+        for buchstabe in text:
+            page.type(selector, buchstabe, delay=random.uniform(0.08, 0.18) * REALISMUS_FAKTOR)
+        time.sleep(random.uniform(0.4, 0.7) * REALISMUS_FAKTOR)
+    except TimeoutError:
+        logging.error(f"Timeout: Feld {selector} nicht gefunden.")
+
+def zufaellig_scrollen(page):
+    for _ in range(random.randint(1, 3)):
+        pos = random.randint(100, 700)
+        page.mouse.wheel(0, pos)
+        time.sleep(random.uniform(0.3, 0.6) * REALISMUS_FAKTOR)
+
+def realistisch_klicken(page, selector):
+    try:
+        locator = page.locator(selector)
+        locator.wait_for(state="visible", timeout=7000)
+        box = locator.bounding_box()
+        if box:
+            for _ in range(random.randint(2, 4)):
+                x = random.uniform(box["x"], box["x"] + box["width"])
+                y = random.uniform(box["y"], box["y"] + box["height"])
+                page.mouse.move(x, y, steps=random.randint(5, 12))
+                time.sleep(random.uniform(0.05, 0.15) * REALISMUS_FAKTOR)
+        page.click(selector)
+    except TimeoutError:
+        logging.error(f"Timeout beim Klicken: {selector}")
+
+import hashlib
+
+def fill_form_and_check(page):
+    logging.info("Starte Formularablauf...")
+    page.goto("https://www.consultor.com/oue/")
+    page.wait_for_load_state("load")
+    realistisch_klicken(page, SELECTOR_SOLICITUD_LINK)
+    page.wait_for_load_state("load")
+    zufaellig_scrollen(page)
+
+    page.select_option(SELECTOR_PROVINZ, label=config["provinz"])
+    time.sleep(random.uniform(0.5, 1.0) * REALISMUS_FAKTOR)
+    realistisch_klicken(page, SELECTOR_PROVINZ_BUTTON)
+    page.wait_for_selector(SELECTOR_TRAMITE)
+
+    options = page.query_selector_all(f"{SELECTOR_TRAMITE} >> option")
+    found_label = None
+    for option in options:
+        text = option.inner_text().strip()
+        if "n.i.e" in text.lower():
+            found_label = text
+            break
+
+    if not found_label:
+        logging.error("Keine N.I.E Option gefunden.")
+        return
+
+    page.select_option(SELECTOR_TRAMITE, label=found_label)
+    realistisch_klicken(page, SELECTOR_PROVINZ_BUTTON)
+    zufaellig_scrollen(page)
+
+    try:
+        realistisch_klicken(page, SELECTOR_ENTRAR)
+        time.sleep(1 * REALISMUS_FAKTOR)
+    except:
+        logging.info("Kein 'Entrar'-Button vorhanden.")
+
+    if config["dokument_typ"] == "pasaporte":
+        realistisch_klicken(page, SELECTOR_PASSPORT_RADIO)
+    realistisch_tipen(page, SELECTOR_NAME, config["name"])
+    realistisch_tipen(page, SELECTOR_ID, config["ausweisnummer"])
+
+    if config.get("nationalität") == "zufällig":
+        options = page.query_selector_all(f"{SELECTOR_PAIS} >> option")
+        gültige = [opt for opt in options if opt.get_attribute("value") != "0"]
+        if gültige:
+            zufallsland = random.choice(gültige)
+            label = zufallsland.inner_text().strip()
+            page.select_option(SELECTOR_PAIS, label=label)
+            logging.info(f"Zufällige Nationalität: {label}")
+    else:
+        page.select_option(SELECTOR_PAIS, label=config["nationalität"])
+
+    jahr = config.get("geburtsjahr")
+    if jahr:
+        try:
+            page.wait_for_selector(SELECTOR_GEBURTSJAHR, timeout=7000)
+            page.evaluate(f'document.querySelector("{SELECTOR_GEBURTSJAHR}").value = ""')
+            page.fill(SELECTOR_GEBURTSJAHR, str(jahr))
+            current_value = page.get_attribute(SELECTOR_GEBURTSJAHR, "value")
+            if current_value == str(jahr):
+                logging.info(f"Geburtsjahr gesetzt: {current_value}")
+            else:
+                logging.warning(f"Geburtsjahr NICHT korrekt gesetzt. Erwartet: {jahr}, Tatsächlich: {current_value}")
+        except Exception as e:
+            logging.error(f"Fehler beim Geburtsjahr: {e}")
+    else:
+        logging.warning("Kein 'geburtsjahr' in Konfiguration")
+
+    realistisch_klicken(page, SELECTOR_SEND)
+    page.wait_for_timeout(int(500 * REALISMUS_FAKTOR))
+    realistisch_klicken(page, SELECTOR_SEND)
+    logging.info("Formular abgesendet.")
+
+    # Warten, damit sich die Seite vollständig aktualisieren kann
+    page.wait_for_load_state("networkidle")
+    time.sleep(random.uniform(2.0, 4.0))  # extra realistische Wartezeit
+
+    # === HTML-Änderungsprüfung ===
+    html = page.content()
+    neuer_hash = hashlib.sha256(html.encode("utf-8")).hexdigest()
+    hash_datei = "last_hash.txt"
+
+    alter_hash = None
+    if os.path.exists(hash_datei):
+        with open(hash_datei, "r") as f:
+            alter_hash = f.read().strip()
+
+    if neuer_hash != alter_hash:
+        logging.info("Änderung erkannt – Screenshot wird gespeichert.")
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        screenshot_name = f"screenshot_{timestamp}.png"
+        page.screenshot(path=screenshot_name, full_page=True)
+        with open(hash_datei, "w") as f:
+            f.write(neuer_hash)
+    else:
+        logging.info("Keine Änderung auf der letzten Seite festgestellt.")
+
+    with open("cookies.json", "w", encoding="utf-8") as f:
+        json.dump(page.context.cookies(), f, indent=2)
+        logging.info("Cookies gespeichert.")
+
+def main():
+    logging.info("Starte Browser...")
+    with sync_playwright() as p:
+        user_data_dir = os.path.abspath("user_data")
+        Path(user_data_dir).mkdir(parents=True, exist_ok=True)
+        browser = p.chromium.launch_persistent_context(
+            user_data_dir=user_data_dir,
+            headless=config.get("headless", False),
+            slow_mo=50
+        )
+        page = browser.pages[0] if browser.pages else browser.new_page()
+
+        try:
+            fill_form_and_check(page)
+        except Exception as e:
+            logging.exception("Fehler im Ablauf: %s", e)
+        finally:
+            browser.close()
+            logging.info("Browser geschlossen.")
+
+if __name__ == "__main__":
+    main()
