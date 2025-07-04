@@ -2,7 +2,6 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Automatisierte Formularausfüllung – Terminprüfung NIE</title>
 </head>
 <body style="font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: auto; padding: 20px;">
 
