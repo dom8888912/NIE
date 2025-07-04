@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NIE Automation via Playwright – Technical and Business Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      line-height: 1.7;
+      margin: 2em auto;
+      max-width: 900px;
+      padding: 0 1em;
+      background: #fdfdfd;
+      color: #222;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 0.5em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1em 0;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5em;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    code {
+      background: #eee;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    ul {
+      padding-left: 1.2em;
+    }
+  </style>
+</head>
+<body>
+
+<h1>NIE Appointment Automation via Playwright</h1>
+<p><strong>Author:</strong> [Your Name]<br>
+<strong>Date:</strong> July 2025</p>
+
+<h2>Abstract</h2>
+<p>
+This project automates the process of booking an N.I.E. (Número de Identidad de Extranjero) appointment via Spain's governmental web platform. Built using Python and Playwright, the system simulates realistic user behavior to bypass anti-bot protection and capture changes in appointment availability. Through this experience, I acquired deep insights into headless browser automation, JavaScript DOM manipulation, anti-bot evasion strategies, and containerized deployment using Docker.
+</p>
+
+<h2>Project Goal</h2>
+<p>
+The core goal is to automate and optimize the appointment scheduling workflow for foreign residents seeking an N.I.E. number. The application mimics human input to fill forms, manage sessions, and detect page changes, optionally triggering user notifications when new appointment slots become available.
+</p>
+
+<h2>Requirements</h2>
+
+<h3>Functional Requirements</h3>
+<ul>
+  <li>Selection of province, procedure, and document type via dropdowns</li>
+  <li>Simulated human typing, mouse movement, and scrolling</li>
+  <li>Bypass intermediate pages with restricted direct access</li>
+  <li>HTML change detection via hash comparison</li>
+  <li>Persistent browser context and cookie handling</li>
+</ul>
+
+<h3>Non-Functional Requirements</h3>
+<ul>
+  <li>Configurable via YAML file (e.g. for name, ID number, nationality)</li>
+  <li>Supports both headless and visible modes for debugging</li>
+  <li>Fault-tolerant execution with clear logging</li>
+  <li>Packaged in a Docker image with required Linux dependencies</li>
+  <li>Extendable for future dynamic form updates</li>
+</ul>
+
+<h2>Key Technical Insights</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Topic</th>
+      <th>Insight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DOM Interaction</td>
+      <td>Required use of JavaScript <code>evaluate()</code> to correctly fill inputs when <code>fill()</code> failed</td>
+    </tr>
+    <tr>
+      <td>Anti-bot Evasion</td>
+      <td>Implemented randomized scrolling, delays, and cursor movement to simulate human behavior</td>
+    </tr>
+    <tr>
+      <td>Access Constraints</td>
+      <td>Government page blocked direct entry; workaround implemented using an external referrer page</td>
+    </tr>
+    <tr>
+      <td>Docker Environment</td>
+      <td>Installed missing libraries such as <code>libx11</code>, <code>libglib2.0</code>, <code>libnss3</code> during image build</td>
+    </tr>
+    <tr>
+      <td>State Change Detection</td>
+      <td>Generated SHA-256 hashes of final HTML to detect updates and trigger screenshots</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Challenges and Solutions</h2>
+<ul>
+  <li><strong>Broken Selectors:</strong> Many form inputs didn’t react to standard input methods — solved via custom JS and error handling.</li>
+  <li><strong>Changing Page Structure:</strong> Frequent updates to form layouts required resilient code with logging and fallback mechanisms.</li>
+  <li><strong>Anti-bot Limitations:</strong> Mitigated by emulating realistic user interaction patterns (typing delay, hover effects).</li>
+  <li><strong>Network Access:</strong> Entry to the .gov page only possible through a specific intermediate site to avoid session rejection.</li>
+  <li><strong>Missing Libraries in Docker:</strong> Extended Dockerfile to include GUI and media-related libraries.</li>
+</ul>
+
+<h2>Outlook</h2>
+<p>
+This script requires continuous maintenance as selectors, page layouts, and form validation logic change regularly. Adding automated version detection, dynamic selector lookup, or AI-assisted element targeting could improve long-term robustness.
+</p>
+
+<h2>Business Analysis</h2>
+<p>
+The script offers strong potential for a commercial SaaS notification service. By continuously checking for available appointments and notifying users when slots open, the tool can save time and frustration for foreign residents. The system can be extended with:
+</p>
+<ul>
+  <li>Email and SMS notifications when appointments are found</li>
+  <li>Subscription-based priority scanning (e.g. hourly for premium users)</li>
+  <li>User dashboard to manage profiles and regions</li>
+  <li>Affiliate partnerships with relocation services and immigration consultants</li>
+</ul>
+
+<h2>Market Analysis</h2>
+<p>
+In Spain, demand for N.I.E. appointments often exceeds supply due to bureaucratic bottlenecks and limited appointment slots. This leads to a high willingness to pay among expats, freelancers, and immigrants needing quick access to appointments. There is currently no official notification system, leaving room for:
+</p>
+<ul>
+  <li>First-mover advantage in providing structured appointment monitoring</li>
+  <li>Recurring revenue model with low infrastructure cost</li>
+  <li>Geographic scalability to include additional Spanish provinces or consulates abroad</li>
+</ul>
+
+<h2>Conclusion</h2>
+<p>
+This automation project showcases advanced skills in browser scripting, real-world interaction modeling, API-less data extraction, and technical resilience in unstable environments. It bridges the gap between personal utility and commercial potential, combining programming expertise with real market needs.
+</p>
+
+</body>
+</html>
